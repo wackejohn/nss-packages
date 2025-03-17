@@ -61,3 +61,23 @@
  #include "nss_crypto_eip197.h"
  
  /*
+--- a/v2.0/src/hal/ipq807x/nss_crypto_eip197.h
++++ b/v2.0/src/hal/ipq807x/nss_crypto_eip197.h
+@@ -20,6 +20,7 @@
+ #define __NSS_CRYPTO_EIP197_H
+ 
+ #include <linux/types.h>
++#include <linux/fs.h>
+ 
+ /*
+  * Common configuration data for command and result
+--- a/v2.0/src/hal/ipq807x/nss_crypto_hw.c
++++ b/v2.0/src/hal/ipq807x/nss_crypto_hw.c
+@@ -16,6 +16,7 @@
+  */
+ 
+ #include <linux/of_platform.h>
++#include <linux/of.h>
+ #include "nss_crypto_eip197.h"
+ 
+ /*
