@@ -1,0 +1,89 @@
+diff -uNr qca-nss-drv_orig/nss_dtls_cmn_stats.c qca-nss-drv_fix/nss_dtls_cmn_stats.c
+--- qca-nss-drv_orig/nss_dtls_cmn_stats.c	2024-04-06 20:08:54.000000000 +0800
++++ qca-nss-drv_fix/nss_dtls_cmn_stats.c	2025-02-23 17:36:06.000000000 +0800
+@@ -18,6 +18,7 @@
+ #include "nss_dtls_cmn.h"
+ #include "nss_dtls_cmn_stats.h"
+ #include "nss_dtls_cmn_strings.h"
++#include <linux/vmalloc.h>
+ 
+ /*
+  * Declare atomic notifier data structure for statistics.
+diff -uNr qca-nss-drv_orig/nss_ipsec_cmn_stats.c qca-nss-drv_fix/nss_ipsec_cmn_stats.c
+--- qca-nss-drv_orig/nss_ipsec_cmn_stats.c	2024-04-06 20:08:54.000000000 +0800
++++ qca-nss-drv_fix/nss_ipsec_cmn_stats.c	2025-02-23 17:34:48.000000000 +0800
+@@ -20,6 +20,7 @@
+ #include "nss_ipsec_cmn.h"
+ #include "nss_ipsec_cmn_stats.h"
+ #include "nss_ipsec_cmn_strings.h"
++#include <linux/vmalloc.h>
+ 
+ /*
+  * Declare atomic notifier data structure for statistics.
+diff -uNr qca-nss-drv_orig/nss_match_stats.c qca-nss-drv_fix/nss_match_stats.c
+--- qca-nss-drv_orig/nss_match_stats.c	2024-04-06 20:08:54.000000000 +0800
++++ qca-nss-drv_fix/nss_match_stats.c	2025-02-23 17:30:44.000000000 +0800
+@@ -24,6 +24,7 @@
+ #include <nss_match.h>
+ #include "nss_match_stats.h"
+ #include "nss_match_strings.h"
++#include <linux/vmalloc.h>
+ 
+ #define NSS_MATCH_STATS_SIZE_PER_IF (NSS_STATS_MAX_STR_LENGTH * NSS_STATS_NODE_MAX)
+                                         /* Total number of statistics per match interface. */
+diff -uNr qca-nss-drv_orig/nss_mirror_stats.c qca-nss-drv_fix/nss_mirror_stats.c
+--- qca-nss-drv_orig/nss_mirror_stats.c	2024-04-06 20:08:54.000000000 +0800
++++ qca-nss-drv_fix/nss_mirror_stats.c	2025-02-23 17:31:28.000000000 +0800
+@@ -21,6 +21,7 @@
+ #include "nss_mirror.h"
+ #include "nss_mirror_stats.h"
+ #include "nss_mirror_strings.h"
++#include <linux/vmalloc.h>
+ 
+ static struct nss_mirror_stats_debug_instance *stats_db[NSS_MAX_MIRROR_DYNAMIC_INTERFACES];
+ 					/* Mirror stats data structure. */
+diff -uNr qca-nss-drv_orig/nss_qvpn_stats.c qca-nss-drv_fix/nss_qvpn_stats.c
+--- qca-nss-drv_orig/nss_qvpn_stats.c	2024-04-06 20:08:54.000000000 +0800
++++ qca-nss-drv_fix/nss_qvpn_stats.c	2025-02-23 17:37:07.000000000 +0800
+@@ -18,6 +18,7 @@
+ #include <nss_qvpn.h>
+ #include "nss_qvpn_stats.h"
+ #include "nss_qvpn_strings.h"
++#include <linux/vmalloc.h>
+ 
+ /*
+  * Declare atomic notifier data structure for statistics.
+diff -uNr qca-nss-drv_orig/nss_tls_stats.c qca-nss-drv_fix/nss_tls_stats.c
+--- qca-nss-drv_orig/nss_tls_stats.c	2024-04-06 20:08:54.000000000 +0800
++++ qca-nss-drv_fix/nss_tls_stats.c	2025-02-24 09:49:31.000000000 +0800
+@@ -20,6 +20,7 @@
+ #include "nss_tls.h"
+ #include "nss_tls_stats.h"
+ #include "nss_tls_strings.h"
++#include <linux/vmalloc.h>
+ 
+ /*
+  * Declare atomic notifier data structure for statistics.
+diff -uNr qca-nss-drv_orig/nss_tstamp.c qca-nss-drv_fix/nss_tstamp.c
+--- qca-nss-drv_orig/nss_tstamp.c	2024-04-06 20:08:54.000000000 +0800
++++ qca-nss-drv_fix/nss_tstamp.c	2025-02-23 17:28:45.000000000 +0800
+@@ -185,7 +185,7 @@
+ 	case IPVERSION:
+ 		ip_addr = ip_hdr(skb)->saddr;
+ 
+-		rt = ip_route_output(&init_net, ip_addr, 0, 0, 0);
++		rt = ip_route_output(&init_net, ip_addr, 0, 0, 0, 0);
+ 		if (IS_ERR(rt)) {
+ 			return NULL;
+ 		}
+diff -uNr qca-nss-drv_orig/nss_tunipip6_stats.c qca-nss-drv_fix/nss_tunipip6_stats.c
+--- qca-nss-drv_orig/nss_tunipip6_stats.c	2024-04-06 20:08:54.000000000 +0800
++++ qca-nss-drv_fix/nss_tunipip6_stats.c	2025-02-23 17:29:49.000000000 +0800
+@@ -20,6 +20,7 @@
+ #include "nss_tunipip6.h"
+ #include "nss_stats.h"
+ #include "nss_tunipip6_stats.h"
++#include <linux/vmalloc.h>
+ 
+ #define NSS_TUNIPIP6_STATS_MAX_LINES (NSS_STATS_NODE_MAX + 32)
+ 					/**< Maximum number of lines for tunipip6 statistics dump. */

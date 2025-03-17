@@ -1,0 +1,402 @@
+diff -uNr qca-nss-clients_orig/gre/nss_connmgr_gre.c qca-nss-clients_fix/gre/nss_connmgr_gre.c
+--- qca-nss-clients_orig/gre/nss_connmgr_gre.c	2025-02-24 10:01:17.967343495 +0800
++++ qca-nss-clients_fix/gre/nss_connmgr_gre.c	2025-02-24 08:13:47.000000000 +0800
+@@ -186,7 +186,7 @@
+ 	if ((dev->priv_flags_ext & IFF_EXT_GRE_V4_TAP) || (dev->type == ARPHRD_IPGRE)) {
+ 		dev->needed_headroom = sizeof(struct iphdr) + sizeof(struct ethhdr) + MAX_WIFI_HEADROOM + append;
+ 		dev->mtu = ETH_DATA_LEN - sizeof(struct iphdr) - append;
+-		dev->features |= NETIF_F_NETNS_LOCAL | NETIF_F_SG | NETIF_F_FRAGLIST | NETIF_F_HIGHDMA;
++		dev->features |= NETIF_F_SG | NETIF_F_FRAGLIST | NETIF_F_HIGHDMA;
+ 		dev->hw_features |= NETIF_F_SG | NETIF_F_FRAGLIST | NETIF_F_HIGHDMA;
+ 		return 0;
+ 	}
+@@ -200,7 +200,6 @@
+ 		dev->mtu = IPV6_MIN_MTU;
+ 	}
+ 
+-	dev->features |= NETIF_F_NETNS_LOCAL;
+ 	return 0;
+ }
+ 
+@@ -724,10 +723,10 @@
+ {
+ 	switch (cfg->mode) {
+ 	case GRE_MODE_TUN:
+-		strlcpy(name, "tun-%d", IFNAMSIZ);
++		strscpy(name, "tun-%d", IFNAMSIZ);
+ 		break;
+ 	case GRE_MODE_TAP:
+-		strlcpy(name, "tap-%d", IFNAMSIZ);
++		strscpy(name, "tap-%d", IFNAMSIZ);
+ 		break;
+ 	default:
+ 		break;
+@@ -757,7 +756,7 @@
+ 	int ret = -1, retry, next_if_num_inner = 0, next_if_num_outer = 0;
+ 
+ 	if (cfg->name) {
+-		strlcpy(name, cfg->name, IFNAMSIZ);
++		strscpy(name, cfg->name, IFNAMSIZ);
+ 	} else {
+ 		nss_connmgr_gre_make_name(cfg, name);
+ 	}
+@@ -1714,27 +1713,27 @@
+ 
+ {
+ 	if (cfg->ikey_valid) {
+-		*i_flags |= TUNNEL_KEY;
++		*i_flags |= IP_TUNNEL_KEY_BIT;
+ 	}
+ 
+ 	if (cfg->okey_valid) {
+-		*o_flags |= TUNNEL_KEY;
++		*o_flags |= IP_TUNNEL_KEY_BIT;
+ 	}
+ 
+ 	if (cfg->iseq_valid) {
+-		*i_flags |= TUNNEL_SEQ;
++		*i_flags |= IP_TUNNEL_SEQ_BIT;
+ 	}
+ 
+ 	if (cfg->oseq_valid) {
+-		*o_flags |= TUNNEL_SEQ;
++		*o_flags |= IP_TUNNEL_SEQ_BIT;
+ 	}
+ 
+ 	if (cfg->icsum_valid) {
+-		*i_flags |= TUNNEL_CSUM;
++		*i_flags |= IP_TUNNEL_CSUM_BIT;
+ 	}
+ 
+ 	if (cfg->ocsum_valid) {
+-		*o_flags |= TUNNEL_CSUM;
++		*o_flags |= IP_TUNNEL_CSUM_BIT;
+ 	}
+ }
+ 
+@@ -1748,27 +1747,27 @@
+ {
+ 	uint32_t gre_flags = 0;
+ 
+-	if (i_flags & TUNNEL_KEY) {
++	if (i_flags & IP_TUNNEL_KEY_BIT) {
+ 		gre_flags |= NSS_GRE_CONFIG_IKEY_VALID;
+ 	}
+ 
+-	if (o_flags & TUNNEL_KEY) {
++	if (o_flags & IP_TUNNEL_KEY_BIT) {
+ 		gre_flags |= NSS_GRE_CONFIG_OKEY_VALID;
+ 	}
+ 
+-	if (i_flags & TUNNEL_SEQ) {
++	if (i_flags & IP_TUNNEL_SEQ_BIT) {
+ 		gre_flags |= NSS_GRE_CONFIG_ISEQ_VALID;
+ 	}
+ 
+-	if (o_flags & TUNNEL_SEQ) {
++	if (o_flags & IP_TUNNEL_SEQ_BIT) {
+ 		gre_flags |= NSS_GRE_CONFIG_OSEQ_VALID;
+ 	}
+ 
+-	if (i_flags & TUNNEL_CSUM) {
++	if (i_flags & IP_TUNNEL_CSUM_BIT) {
+ 		gre_flags |= NSS_GRE_CONFIG_ICSUM_VALID;
+ 	}
+ 
+-	if (o_flags & TUNNEL_CSUM) {
++	if (o_flags & IP_TUNNEL_CSUM_BIT) {
+ 		gre_flags |= NSS_GRE_CONFIG_OCSUM_VALID;
+ 	}
+ 
+diff -uNr qca-nss-clients_orig/gre/nss_connmgr_gre_v4.c qca-nss-clients_fix/gre/nss_connmgr_gre_v4.c
+--- qca-nss-clients_orig/gre/nss_connmgr_gre_v4.c	2024-06-25 13:04:14.000000000 +0800
++++ qca-nss-clients_fix/gre/nss_connmgr_gre_v4.c	2025-02-24 08:12:05.000000000 +0800
+@@ -45,7 +45,7 @@
+ 	struct net_device *dev;
+ 	uint32_t ip_addr __attribute__ ((unused)) = ntohl(dest_ip);
+ 
+-	rt = ip_route_output(&init_net, htonl(dest_ip), 0, 0, 0);
++	rt = ip_route_output(&init_net, htonl(dest_ip), 0, 0, 0, 0);
+ 	if (IS_ERR(rt)) {
+ 		nss_connmgr_gre_warning("Unable to lookup route for %pI4\n", &ip_addr);
+ 		return NULL;
+@@ -87,7 +87,7 @@
+ 	dev_put(local_dev);
+ 	nss_connmgr_gre_info("Src MAC address for %pI4 is %pM\n", &laddr, src_mac);
+ 
+-	rt = ip_route_output(&init_net, raddr, 0, 0, 0);
++	rt = ip_route_output(&init_net, raddr, 0, 0, 0, 0);
+ 	if (IS_ERR(rt)) {
+ 		nss_connmgr_gre_warning("route look up failed for %pI4\n", &raddr);
+ 		return GRE_ERR_RADDR_ROUTE_LOOKUP;
+@@ -216,9 +216,9 @@
+ 		t->parms.o_key = cfg->okey;
+ 	}
+ 
+-	nss_connmgr_gre_set_gre_flags(cfg, &t->parms.o_flags, &t->parms.i_flags);
++	nss_connmgr_gre_set_gre_flags(cfg, (uint16_t *)&t->parms.o_flags, (uint16_t *)&t->parms.i_flags);
+ 
+-	strlcpy(t->parms.name, dev->name, IFNAMSIZ);
++	strscpy(t->parms.name, dev->name, IFNAMSIZ);
+ 	t->dev = dev;
+ 	return GRE_SUCCESS;
+ }
+diff -uNr qca-nss-clients_orig/gre/nss_connmgr_gre_v6.c qca-nss-clients_fix/gre/nss_connmgr_gre_v6.c
+--- qca-nss-clients_orig/gre/nss_connmgr_gre_v6.c	2025-02-24 10:01:17.929444405 +0800
++++ qca-nss-clients_fix/gre/nss_connmgr_gre_v6.c	2025-02-24 08:22:54.000000000 +0800
+@@ -322,9 +322,9 @@
+ 		t->parms.o_key = cfg->okey;
+ 	}
+ 
+-	nss_connmgr_gre_set_gre_flags(cfg, &t->parms.o_flags, &t->parms.i_flags);
++	nss_connmgr_gre_set_gre_flags(cfg, (uint16_t *)&t->parms.o_flags, (uint16_t *)&t->parms.i_flags);
+ 
+-	strlcpy(t->parms.name, dev->name, IFNAMSIZ);
++	strscpy(t->parms.name, dev->name, IFNAMSIZ);
+ 	t->dev = dev;
+ 	return GRE_SUCCESS;
+ }
+diff -uNr qca-nss-clients_orig/gre/test/nss_connmgr_gre_test.c qca-nss-clients_fix/gre/test/nss_connmgr_gre_test.c
+--- qca-nss-clients_orig/gre/test/nss_connmgr_gre_test.c	2025-02-24 10:01:17.956844173 +0800
++++ qca-nss-clients_fix/gre/test/nss_connmgr_gre_test.c	2025-02-24 08:25:44.000000000 +0800
+@@ -143,7 +143,7 @@
+ 		 * parameter parsing for delete command
+ 		 */
+ 		if (!strcmp(param, "dev")) {
+-			strlcpy(dev_name, value, IFNAMSIZ);
++			strscpy(dev_name, value, IFNAMSIZ);
+ 			dev_name_valid = true;
+ 			break;
+ 		}
+@@ -153,19 +153,19 @@
+ 		 * tap create command
+ 		 */
+ 		if (!strcmp(param, "next_dev")) {
+-			strlcpy(dev_name, value, IFNAMSIZ);
++			strscpy(dev_name, value, IFNAMSIZ);
+ 			dev_name_valid = true;
+ 			continue;
+ 		}
+ 
+ 		if (!strcmp(param, "saddr")) {
+-			strlcpy(saddr, value, 20);
++			strscpy(saddr, value, 20);
+ 			saddr_valid = true;
+ 			continue;
+ 		}
+ 
+ 		if (!strcmp(param, "daddr")) {
+-			strlcpy(daddr, value, 20);
++			strscpy(daddr, value, 20);
+ 			daddr_valid = true;
+ 			continue;
+ 		}
+diff -uNr qca-nss-clients_orig/match/nss_match_cmd.c qca-nss-clients_fix/match/nss_match_cmd.c
+--- qca-nss-clients_orig/match/nss_match_cmd.c	2025-02-24 10:01:17.974896445 +0800
++++ qca-nss-clients_fix/match/nss_match_cmd.c	2025-02-24 09:12:07.000000000 +0800
+@@ -124,7 +124,7 @@
+  * nss_match_cmd_procfs_config_handler()
+  * 	Handles command input by user to create and configure match instance.
+  */
+-static int nss_match_cmd_procfs_config_handler(struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
++static int nss_match_cmd_procfs_config_handler(const struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
+ {
+ 	char *command_str, *token, *param, *value;
+ 	char *input_msg, *input_msg_orig;
+@@ -451,7 +451,7 @@
+  * nss_match_cmd_procfs_reset_nexthop
+  * 	Reset to default nexthop of an interface
+  */
+-static int nss_match_cmd_procfs_reset_nexthop(struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
++static int nss_match_cmd_procfs_reset_nexthop(const struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
+ {
+ 	struct net_device *dev;
+ 	uint32_t if_num, type = 0;
+@@ -521,7 +521,7 @@
+  * 	Set next hop of an interface to a match instance.
+  * 	Only VAP and physical interfaces are supported as of now.
+  */
+-static int nss_match_cmd_procfs_set_if_nexthop(struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
++static int nss_match_cmd_procfs_set_if_nexthop(const struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
+ {
+ 	struct net_device *dev;
+ 	uint32_t if_num, type = 0;
+@@ -632,7 +632,7 @@
+  * nss_match_cmd_procfs_read_help()
+  * 	Display help for commands.
+  */
+-static int nss_match_cmd_procfs_read_help(struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
++static int nss_match_cmd_procfs_read_help(const struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
+ {
+ 	int ret = proc_dointvec(ctl, write, buffer, lenp, ppos);
+ 
+diff -uNr qca-nss-clients_orig/mirror/nss_mirror.c qca-nss-clients_fix/mirror/nss_mirror.c
+--- qca-nss-clients_orig/mirror/nss_mirror.c	2024-06-25 13:04:14.000000000 +0800
++++ qca-nss-clients_fix/mirror/nss_mirror.c	2025-02-24 09:14:08.000000000 +0800
+@@ -20,6 +20,7 @@
+ #include <linux/types.h>
+ #include <linux/module.h>
+ #include <linux/netdevice.h>
++#include <linux/vmalloc.h>
+ 
+ #include <nss_api_if.h>
+ #include <nss_cmn.h>
+diff -uNr qca-nss-clients_orig/mirror/nss_mirror_ctl.c qca-nss-clients_fix/mirror/nss_mirror_ctl.c
+--- qca-nss-clients_orig/mirror/nss_mirror_ctl.c	2025-02-24 10:01:17.975027536 +0800
++++ qca-nss-clients_fix/mirror/nss_mirror_ctl.c	2025-02-24 09:17:48.000000000 +0800
+@@ -18,6 +18,7 @@
+ 
+ #include <linux/sysctl.h>
+ #include <linux/string.h>
++#include <linux/vmalloc.h>
+ 
+ #include "nss_mirror_public.h"
+ #include "nss_mirror.h"
+@@ -132,7 +133,7 @@
+ {
+ 	char dev_name[IFNAMSIZ] = {0};
+ 
+-	strlcpy(dev_name, name, IFNAMSIZ);
++	strscpy(dev_name, name, IFNAMSIZ);
+ 	if (dev_name[strlen(dev_name) - 1] == '\n') {
+ 		dev_name[strlen(dev_name) - 1] = '\0';
+ 	}
+@@ -357,7 +358,7 @@
+ 		return -1;
+ 	}
+ 
+-	strlcpy(dev_name, value, IFNAMSIZ);
++	strscpy(dev_name, value, IFNAMSIZ);
+ 	if (dev_name[strlen(dev_name) - 1] == '\n') {
+ 		dev_name[strlen(dev_name) - 1] = '\0';
+ 	}
+@@ -754,7 +755,7 @@
+  * nss_mirror_ctl_config_handler()
+  *	Mirror sysctl config handler.
+  */
+-static int nss_mirror_ctl_config_handler(struct ctl_table *ctl, int write,
++static int nss_mirror_ctl_config_handler(const struct ctl_table *ctl, int write,
+ 		 void __user *buf, size_t *lenp, loff_t *ppos)
+ {
+ 	char *buffer, *pfree;
+diff -uNr qca-nss-clients_orig/tunipip6/nss_connmgr_tunipip6.c qca-nss-clients_fix/tunipip6/nss_connmgr_tunipip6.c
+--- qca-nss-clients_orig/tunipip6/nss_connmgr_tunipip6.c	2025-02-24 10:01:17.958278423 +0800
++++ qca-nss-clients_fix/tunipip6/nss_connmgr_tunipip6.c	2025-02-24 08:28:00.000000000 +0800
+@@ -23,6 +23,7 @@
+ #include <linux/module.h>
+ #include <linux/skbuff.h>
+ #include <linux/netdevice.h>
++#include <linux/vmalloc.h>
+ #include <net/ip.h>
+ #include <net/ipv6.h>
+ #include <linux/if.h>
+@@ -174,7 +175,7 @@
+ 	nss_tunipip6_info("%px: received - %d bytes name %s ver %x\n",
+ 			skb, skb->len, dev->name, iph->version);
+ 
+-	rt = ip_route_output(&init_net, iph->daddr, 0, 0, 0);
++	rt = ip_route_output(&init_net, iph->daddr, 0, 0, 0, 0);
+ 	if (unlikely(IS_ERR(rt))) {
+ 		nss_tunipip6_info("%px: Failed to find IPv4 route for dest %pI4 src %pI4\n", skb, &iph->daddr, &iph->saddr);
+ 		dev_kfree_skb_any(skb);
+@@ -284,7 +285,7 @@
+ 	iph = ip_hdr(skb);
+ 	nss_tunipip6_assert(iph->version == 4);
+ 
+-	rt = ip_route_output(&init_net, iph->daddr, 0, 0, 0);
++	rt = ip_route_output(&init_net, iph->daddr, 0, 0, 0, 0);
+ 	if (unlikely(IS_ERR(rt))) {
+ 		nss_tunipip6_info("%px: Failed to find IPv4 route for %pI4\n", skb, &iph->daddr);
+ 		dev_kfree_skb_any(skb);
+diff -uNr qca-nss-clients_orig/tunipip6/nss_connmgr_tunipip6_stats.c qca-nss-clients_fix/tunipip6/nss_connmgr_tunipip6_stats.c
+--- qca-nss-clients_orig/tunipip6/nss_connmgr_tunipip6_stats.c	2024-06-25 13:04:14.000000000 +0800
++++ qca-nss-clients_fix/tunipip6/nss_connmgr_tunipip6_stats.c	2025-02-24 09:02:13.000000000 +0800
+@@ -18,6 +18,7 @@
+ 
+ #include <nss_api_if.h>
+ #include "nss_connmgr_tunipip6_priv.h"
++#include <linux/vmalloc.h>
+ 
+ /*
+  * nss_tunipip6_stats_str
+diff -uNr qca-nss-clients_orig/tunipip6/nss_connmgr_tunipip6_sysctl.c qca-nss-clients_fix/tunipip6/nss_connmgr_tunipip6_sysctl.c
+--- qca-nss-clients_orig/tunipip6/nss_connmgr_tunipip6_sysctl.c	2025-02-24 10:01:17.975154356 +0800
++++ qca-nss-clients_fix/tunipip6/nss_connmgr_tunipip6_sysctl.c	2025-02-24 09:00:31.000000000 +0800
+@@ -52,7 +52,7 @@
+ };
+ 
+ 
+-static int nss_tunipip6_data_parser(struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos, enum nss_tunipip6_sysctl_mode mode)
++static int nss_tunipip6_data_parser(const struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos, enum nss_tunipip6_sysctl_mode mode)
+ {
+ 	char dev_name[NETDEV_STR_LEN] = {0}, ipv6_prefix_str[PREFIX_STR_LEN] = {0}, ipv6_suffix_str[PREFIX_STR_LEN] = {0}, ipv4_prefix_str[PREFIX_STR_LEN] = {0};
+ 	uint32_t ipv6_prefix[4], ipv6_prefix_len, ipv6_suffix[4], ipv6_suffix_len, ipv4_prefix, ipv4_prefix_len, ea_len, psid_offset;
+@@ -108,7 +108,7 @@
+ 		 */
+ 
+ 		if (!strcmp(param, "netdev")) {
+-			strlcpy(dev_name, value, 30);
++			strscpy(dev_name, value, 30);
+ 			dev = dev_get_by_name(&init_net, dev_name);
+ 			if (!dev) {
+ 				kfree(pfree);
+@@ -147,7 +147,7 @@
+ 		}
+ 
+ 		if (!strcmp(param, "ipv4_prefix")) {
+-			strlcpy(ipv4_prefix_str, value, 30);
++			strscpy(ipv4_prefix_str, value, 30);
+ 			ret = in4_pton(ipv4_prefix_str, -1, (uint8_t *)&ipv4_prefix, -1, NULL);
+ 			if (ret != 1) {
+ 				kfree(pfree);
+@@ -173,7 +173,7 @@
+ 		}
+ 
+ 		if (!strcmp(param, "ipv6_prefix")) {
+-			strlcpy(ipv6_prefix_str, value, 100);
++			strscpy(ipv6_prefix_str, value, 100);
+ 			ret = in6_pton(ipv6_prefix_str, -1, (uint8_t *)&ipv6_prefix, -1, NULL);
+ 			if (ret != 1) {
+ 				kfree(pfree);
+@@ -199,7 +199,7 @@
+ 		}
+ 
+ 		if (!strcmp(param, "ipv6_suffix")) {
+-			strlcpy(ipv6_suffix_str, value, 100);
++			strscpy(ipv6_suffix_str, value, 100);
+ 			ret = in6_pton(ipv6_suffix_str, -1, (uint8_t *)&ipv6_suffix, -1, NULL);
+ 			if (ret != 1) {
+ 				kfree(pfree);
+@@ -368,27 +368,27 @@
+ 	return 0;
+ }
+ 
+-static int nss_tunipip6_cmd_procfs_add_maprule(struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
++static int nss_tunipip6_cmd_procfs_add_maprule(const struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
+ {
+ 	return nss_tunipip6_data_parser(ctl, write, buffer, lenp, ppos, NSS_TUNIPIP6_SYSCTL_ADD_MAPRULE);
+ }
+ 
+-static int nss_tunipip6_cmd_procfs_del_maprule(struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
++static int nss_tunipip6_cmd_procfs_del_maprule(const struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
+ {
+ 	return nss_tunipip6_data_parser(ctl, write, buffer, lenp, ppos, NSS_TUNIPIP6_SYSCTL_DEL_MAPRULE);
+ }
+ 
+-static int nss_tunipip6_cmd_procfs_flush_fmr_rule(struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
++static int nss_tunipip6_cmd_procfs_flush_fmr_rule(const struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
+ {
+ 	return nss_tunipip6_data_parser(ctl, write, buffer, lenp, ppos, NSS_TUNIPIP6_SYSCTL_FLUSH_FMR_RULE);
+ }
+ 
+-static int nss_tunipip6_cmd_procfs_enable_frag_id(struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
++static int nss_tunipip6_cmd_procfs_enable_frag_id(const struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
+ {
+ 	return nss_tunipip6_data_parser(ctl, write, buffer, lenp, ppos, NSS_TUNIPIP6_SYSCTL_FRAG_ID);
+ }
+ 
+-static int nss_tunipip6_cmd_procfs_read_help(struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
++static int nss_tunipip6_cmd_procfs_read_help(const struct ctl_table *ctl, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
+ {
+ 	int ret = proc_dointvec(ctl, write, buffer, lenp, ppos);
+ 

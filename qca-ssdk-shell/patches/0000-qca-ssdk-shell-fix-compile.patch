@@ -1,0 +1,13 @@
+diff -uNr qca-ssdk-shell_orig/make/target.mk qca-ssdk-shell/make/target.mk
+--- qca-ssdk-shell_orig/make/target.mk	2024-05-21 10:08:47.000000000 +0800
++++ qca-ssdk-shell/make/target.mk	2024-09-12 13:04:28.964255882 +0800
+@@ -15,7 +15,8 @@
+ $(DEP_LIST) : %.d : %.c
+ 	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -MM $< > $(DST_DIR)/$@.tmp
+ 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $(DST_DIR)/$@.tmp > $(DST_DIR)/$@
+-	$(RM) -f $(DST_DIR)/$@.tmp;
++	$(RM) -f $(DST_DIR)/$@.tmp
++	$(RM) -f $(DST_DIR)/$@;
+ 
+ build_dir: $(DST_DIR)
+ 
